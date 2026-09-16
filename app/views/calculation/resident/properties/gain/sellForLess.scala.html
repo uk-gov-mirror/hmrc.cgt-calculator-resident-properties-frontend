@@ -25,7 +25,7 @@
     submitButton: playHelpers.submitButton
 )
 
-@(sellForLessForm: Form[SellForLessModel], navBackLink: Option[String])(implicit request: Request[_], messages: Messages)
+@(sellForLessForm: Form[SellForLessModel], mode: Mode, navBackLink: Option[String])(implicit request: Request[_], messages: Messages)
 
 @title = @{
     if (sellForLessForm.errors.nonEmpty) Messages("site.title.error",  Messages("calc.resident.properties.sellForLess.title")) else Messages("calc.resident.properties.sellForLess.title")
@@ -37,7 +37,7 @@
 
 @errorSummary(sellForLessForm.errors, Some("sell-for-less"))
 
-@form(action = controllers.routes.GainController.submitSellForLess) {
+@form(action = controllers.routes.GainController.submitSellForLess(mode)) {
 
     @inputRadio(
         legend = Messages("calc.resident.properties.sellForLess.title"),

@@ -16,40 +16,43 @@
 
 package controllers
 
-import common.KeystoreKeys.{ResidentPropertyKeys => keystoreKeys}
+import common.KeystoreKeys.ResidentPropertyKeys as keystoreKeys
 import common.{Dates, TaxDates}
 import connectors.CalculatorConnector
 import controllers.predicates.ValidActiveSession
 import controllers.utils.RecoverableFuture
-import forms.resident.AcquisitionCostsForm._
-import forms.resident.AcquisitionValueForm._
-import forms.resident.DisposalCostsForm._
-import forms.resident.DisposalDateForm._
-import forms.resident.DisposalValueForm._
-import forms.resident.WorthWhenInheritedForm._
-import forms.resident.WorthWhenSoldForLessForm._
-import forms.resident.properties.BoughtForLessThanWorthForm._
-import forms.resident.properties.HowBecameOwnerForm._
-import forms.resident.properties.ImprovementsForm._
-import forms.resident.properties.SellForLessForm._
-import forms.resident.properties.SellOrGiveAwayForm._
-import forms.resident.properties.ValueBeforeLegislationStartForm._
-import forms.resident.properties.WorthWhenBoughtForLessForm._
-import forms.resident.properties.WorthWhenGaveAwayForm._
-import forms.resident.properties.gain.OwnerBeforeLegislationStartForm._
-import forms.resident.properties.gain.WhoDidYouGiveItToForm._
-import forms.resident.properties.gain.WorthWhenGiftedForm._
-import models.resident._
-import models.resident.properties._
+import forms.resident.AcquisitionCostsForm.*
+import forms.resident.AcquisitionValueForm.*
+import forms.resident.DisposalCostsForm.*
+import forms.resident.DisposalDateForm.*
+import forms.resident.DisposalValueForm.*
+import forms.resident.WorthWhenInheritedForm.*
+import forms.resident.WorthWhenSoldForLessForm.*
+import forms.resident.properties.BoughtForLessThanWorthForm.*
+import forms.resident.properties.HowBecameOwnerForm.*
+import forms.resident.properties.ImprovementsForm.*
+import forms.resident.properties.SellForLessForm.*
+import forms.resident.properties.SellOrGiveAwayForm.*
+import forms.resident.properties.ValueBeforeLegislationStartForm.*
+import forms.resident.properties.WorthWhenBoughtForLessForm.*
+import forms.resident.properties.WorthWhenGaveAwayForm.*
+import forms.resident.properties.gain.OwnerBeforeLegislationStartForm.*
+import forms.resident.properties.gain.WhoDidYouGiveItToForm.*
+import forms.resident.properties.gain.WorthWhenGiftedForm.*
+import models.Mode
+import models.resident.*
+import models.resident.properties.*
 import models.resident.properties.gain.{OwnerBeforeLegislationStartModel, WhoDidYouGiveItToModel, WorthWhenGiftedModel}
+import navigation.Navigation
+import pages.{DisposalDatePage, SellForLessPage, SellOrGiveAwayPage}
 import play.api.data.Form
 import play.api.i18n.{I18nSupport, Messages, MessagesProvider}
-import play.api.mvc._
+import play.api.mvc.*
 import services.SessionCacheService
 import uk.gov.hmrc.http.SessionKeys
 import uk.gov.hmrc.play.bootstrap.frontend.controller.FrontendController
 import views.html.calculation.resident.outsideTaxYear
-import views.html.calculation.resident.properties.gain._
+import views.html.calculation.resident.properties.gain.*
 
 import java.time.LocalDate
 import java.util.UUID
@@ -61,6 +64,7 @@ class GainController @Inject()(
                                 val calcConnector: CalculatorConnector,
                                 val sessionCacheService: SessionCacheService,
                                 val messagesControllerComponents: MessagesControllerComponents,
+                                navigation: Navigation,
                                 disposalCostsView: disposalCosts,
                                 disposalDateView: disposalDate,
                                 disposalValueView: disposalValue,
@@ -92,7 +96,8 @@ class GainController @Inject()(
   }
 
   //################# Disposal Date Actions ####################
-  def disposalDate: Action[AnyContent] = Action.async { implicit request =>
+  def disposalDate(mode: Mode): Action[AnyContent] = Action.async { implicit request =>
+    println("Mode in disposaldate .."+mode)
     if (request.session.get(SessionKeys.portalState).isEmpty) {
       val sessionId = request.session.get(SessionKeys.sessionId).getOrElse {
         s"session-${UUID.randomUUID.toString}"
@@ -103,22 +108,27 @@ class GainController @Inject()(
         (SessionKeys.sessionId   -> sessionId)
 
       Future.successful(
-        Ok(disposalDateView(disposalDateForm()))
+        Ok(disposalDateView(disposalDateForm(), mode))
           .withSession(updatedSession)
       )
     } else {
       sessionCacheService.fetchAndGetFormData[DisposalDateModel](keystoreKeys.disposalDate).map {
-        case Some(data) => Ok(disposalDateView(disposalDateForm().fill(data)))
-        case None => Ok(disposalDateView(disposalDateForm()))
+        case Some(data) => Ok(disposalDateView(disposalDateForm().fill(data), mode))
+        case None => Ok(disposalDateView(disposalDateForm(), mode))
       }
     }
   }
 
-  def submitDisposalDate: Action[AnyContent] = ValidateSession.async { implicit request =>
+  def submitDisposalDate(mode: Mode): Action[AnyContent] = ValidateSession.async { implicit request =>
 
     def routeRequest(taxYearResult: Option[TaxYearModel]): Future[Result] = {
-      if (taxYearResult.isDefined && !taxYearResult.get.isValidYear) Future.successful(Redirect(routes.GainController.outsideTaxYears))
-      else Future.successful(Redirect(routes.GainController.sellOrGiveAway))
+      println("mode----"+mode)
+      if (taxYearResult.isDefined && !taxYearResult.get.isValidYear)
+
+        Future.successful(Redirect(routes.GainController.outsideTaxYears(mode)))
+              else
+        Future.successful(Redirect(navigation.nextPage(DisposalDatePage, mode, None)))
+        //Future.successful(Redirect(routes.GainController.sellOrGiveAway(mode)))
     }
 
     def bindForm(minimumDate: LocalDate) = {
@@ -128,7 +138,7 @@ class GainController @Inject()(
           BadRequest(
             disposalDateView(errors.copy(errors = errors.errors.map { error =>
               if (error.key == "") error.copy(key = "disposalDateDay") else error
-            }))
+            }), mode)
           )
         )},
         success => {
@@ -148,26 +158,31 @@ class GainController @Inject()(
   }
 
   //################ Sell or Give Away Actions ######################
-  lazy val sellOrGiveAwayBackUrl = routes.GainController.disposalDate.url
-  lazy val sellOrGiveAwayPostAction = controllers.routes.GainController.submitSellOrGiveAway
+ // lazy val sellOrGiveAwayBackUrl = routes.GainController.disposalDate(mode).url
+  //lazy val sellOrGiveAwayPostAction = controllers.routes.GainController.submitSellOrGiveAway(mode)
 
-  def sellOrGiveAway: Action[AnyContent] = ValidateSession.async { implicit request =>
+  def sellOrGiveAway(mode: Mode): Action[AnyContent] = ValidateSession.async { implicit request =>
 
     sessionCacheService.fetchAndGetFormData[SellOrGiveAwayModel](keystoreKeys.sellOrGiveAway).map {
-      case Some(data) => Ok(sellOrGiveAwayView(sellOrGiveAwayForm.fill(data), Some(sellOrGiveAwayBackUrl), sellOrGiveAwayPostAction))
-      case _ => Ok(sellOrGiveAwayView(sellOrGiveAwayForm, Some(sellOrGiveAwayBackUrl), sellOrGiveAwayPostAction))
+      case Some(data) => Ok(sellOrGiveAwayView(sellOrGiveAwayForm.fill(data), Some(routes.GainController.disposalDate(mode).url), controllers.routes.GainController.submitSellOrGiveAway(mode)))
+      case _ => Ok(sellOrGiveAwayView(sellOrGiveAwayForm, Some(routes.GainController.disposalDate(mode).url), controllers.routes.GainController.submitSellOrGiveAway(mode)))
     }
   }
 
-  def submitSellOrGiveAway: Action[AnyContent] = ValidateSession.async { implicit request =>
+  def submitSellOrGiveAway(mode: Mode): Action[AnyContent] = ValidateSession.async { implicit request =>
     sellOrGiveAwayForm.bindFromRequest().fold(
-      errors => Future.successful(BadRequest(sellOrGiveAwayView(errors, Some(sellOrGiveAwayBackUrl), sellOrGiveAwayPostAction))),
+      errors => Future.successful(BadRequest(sellOrGiveAwayView(errors, Some(routes.GainController.disposalDate(mode).url), controllers.routes.GainController.submitSellOrGiveAway(mode)))),
       success => {
         sessionCacheService.saveFormData[SellOrGiveAwayModel](keystoreKeys.sellOrGiveAway, success).flatMap(_ =>
-        success match {
-          case SellOrGiveAwayModel(true) => Future.successful(Redirect(routes.GainController.whoDidYouGiveItTo))
-          case SellOrGiveAwayModel(false) => Future.successful(Redirect(routes.GainController.sellForLess))
-        }
+          Future.successful(Redirect(navigation.nextPage(SellOrGiveAwayPage, mode, Some(success.givenAway))))
+//        success match {
+//          case SellOrGiveAwayModel(true) =>
+//            Future.successful(Redirect(navigation.nextPage(SellOrGiveAwayPage, mode)))
+//            //Future.successful(Redirect(routes.GainController.whoDidYouGiveItTo))
+//          case SellOrGiveAwayModel(false) =>
+//            Future.successful(Redirect(navigation.nextPage(SellForLessPage, mode)))
+//            //Future.successful(Redirect(routes.GainController.sellForLess(mode)))
+//        }
         )
       }
     )
@@ -217,7 +232,7 @@ class GainController @Inject()(
   }
 
   //################ Outside Tax Years Actions ######################
-  def outsideTaxYears: Action[AnyContent] = ValidateSession.async { implicit request =>
+  def outsideTaxYears(mode: Mode): Action[AnyContent] = ValidateSession.async { implicit request =>
     (for {
       disposalDate <- sessionCacheService.fetchAndGetFormData[DisposalDateModel](keystoreKeys.disposalDate)
       taxYear <- calcConnector.getTaxYear(s"${disposalDate.get.year}-${disposalDate.get.month}-${disposalDate.get.day}")
@@ -226,8 +241,8 @@ class GainController @Inject()(
         taxYear = taxYear.get,
         isAfterApril15 = TaxDates.dateAfterStart(Dates.constructDate(disposalDate.get.day, disposalDate.get.month, disposalDate.get.year)),
         true,
-        navBackLink = routes.GainController.disposalDate.url,
-        continueUrl = routes.GainController.sellOrGiveAway.url,
+        navBackLink = routes.GainController.disposalDate(mode).url,
+        continueUrl = routes.GainController.sellOrGiveAway(mode).url,
         navTitle = Messages("calc.base.resident.properties.home")
       ))
     }).recoverToStart()
@@ -257,17 +272,17 @@ class GainController @Inject()(
   }
 
   //############## Sell for Less Actions ##################
-  lazy val sellForLessBackLink = Some(controllers.routes.GainController.sellOrGiveAway.url)
+  //lazy val sellForLessBackLink = Some(controllers.routes.GainController.sellOrGiveAway(mode).url)
 
-  def sellForLess: Action[AnyContent] = ValidateSession.async {implicit request =>
+  def sellForLess(mode: Mode): Action[AnyContent] = ValidateSession.async {implicit request =>
     sessionCacheService.fetchAndGetFormData[SellForLessModel](keystoreKeys.sellForLess).map{
-      case Some(data) => Ok(sellForLessView(sellForLessForm.fill(data), sellForLessBackLink))
-      case _ => Ok(sellForLessView(sellForLessForm, sellForLessBackLink))
+      case Some(data) => Ok(sellForLessView(sellForLessForm.fill(data), mode, Some(controllers.routes.GainController.sellOrGiveAway(mode).url)))
+      case _ => Ok(sellForLessView(sellForLessForm, mode, Some(controllers.routes.GainController.sellOrGiveAway(mode).url)))
     }
   }
 
-  val submitSellForLess: Action[AnyContent] = ValidateSession.async { implicit request =>
-    def errorAction(errors: Form[SellForLessModel]) = Future.successful(BadRequest(sellForLessView(errors, sellForLessBackLink)))
+  def submitSellForLess(mode: Mode ): Action[AnyContent] = ValidateSession.async { implicit request =>
+    def errorAction(errors: Form[SellForLessModel]) = Future.successful(BadRequest(sellForLessView(errors, mode, Some(controllers.routes.GainController.sellOrGiveAway(mode).url))))
 
     def routeRequest(model: SellForLessModel) = {
       if (model.sellForLess) Future.successful(Redirect(routes.GainController.worthWhenSoldForLess))

@@ -25,7 +25,7 @@
         submitButton: playHelpers.submitButton
 )
 
-@(disposalDateForm: Form[DisposalDateModel])(implicit request: Request[_], messages: Messages)
+@(disposalDateForm: Form[DisposalDateModel], mode: Mode)(implicit request: Request[_], messages: Messages)
 
 @title = @{
     if(disposalDateForm.errors.nonEmpty) messages("site.title.error", Messages("calc.resident.disposalDate.question")) else Messages("calc.resident.disposalDate.question")
@@ -36,7 +36,7 @@
 ) {
     @errorSummary(disposalDateForm.errors.headOption.toList, errorSuffixes = Some(Map("disposalDate" -> "day")))
 
-    @form(action = controllers.routes.GainController.submitDisposalDate) {
+    @form(action = controllers.routes.GainController.submitDisposalDate(mode)) {
 
         @dateInput(
             content = Messages("calc.resident.disposalDate.question"),

@@ -1,3 +1,5 @@
+import play.sbt.routes.RoutesKeys
+
 /*
  * Copyright 2024 HM Revenue & Customs
  *
@@ -39,5 +41,7 @@ lazy val microservice = Project(appName, file("."))
         TestFrameworks.ScalaTest,
         "-oNCHPQR",
         "-u", "target/test-reports",
-        "-h", "target/test-reports/html-report")
+        "-h", "target/test-reports/html-report"),
+    RoutesKeys.routesImport ++= Seq("models._", "uk.gov.hmrc.play.bootstrap.binders.RedirectUrl"),
+
   )

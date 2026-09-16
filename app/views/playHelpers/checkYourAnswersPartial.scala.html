@@ -40,10 +40,10 @@
 <div class="govuk-summary-list">
 
     <!-- Gain Answers-->
-    @summaryDateRowHelper("disposalDate",Messages("calc.resident.disposalDate.question"),gainAnswers.disposalDate, Some(gainRoutes.disposalDate.toString), extraClass = "summary-overline", displayLink = displayLinks)
+    @summaryDateRowHelper("disposalDate",Messages("calc.resident.disposalDate.question"),gainAnswers.disposalDate, Some(gainRoutes.disposalDate(CheckMode).toString), extraClass = "summary-overline", displayLink = displayLinks)
 
     @summaryTextRowHelper("sellOrGiveAway", Messages("calc.resident.sellOrGiveAway.title"), if (gainAnswers.givenAway) {Messages("calc.resident.sellOrGiveAway.given")}
-    else {Messages("calc.resident.sellOrGiveAway.sold")}, Some(gainRoutes.sellOrGiveAway.toString), displayLink = displayLinks)
+    else {Messages("calc.resident.sellOrGiveAway.sold")}, Some(gainRoutes.sellOrGiveAway(CheckMode).toString), displayLink = displayLinks)
 
     @if(gainAnswers.givenAway){
         @summaryTextRowHelper("whoDidYouGiveItTo", Messages("calc.resident.whoDidYouGiveThePropertyTo.title"), Messages("calc.resident.whoDidYouGiveThePropertyTo.other"), Some(gainRoutes.whoDidYouGiveItTo.toString), displayLink = displayLinks)

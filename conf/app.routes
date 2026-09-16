@@ -13,15 +13,21 @@ GET         /session-timeout        controllers.TimeoutController.timeout()
 GET     /                                  controllers.PropertiesController.introduction
 
 #Disposal Date Routes
-GET     /disposal-date                    controllers.GainController.disposalDate
-POST    /disposal-date                    controllers.GainController.submitDisposalDate
+GET     /disposal-date                    controllers.GainController.disposalDate(mode: Mode = NormalMode)
+POST    /disposal-date                    controllers.GainController.submitDisposalDate(mode: Mode = NormalMode)
+GET     /disposal-date/change                   controllers.GainController.disposalDate(mode: Mode = CheckMode)
+POST    /disposal-date/change                    controllers.GainController.submitDisposalDate(mode: Mode = CheckMode)
+
 
 #Outside Tax Years Routes
-GET     /outside-tax-years                controllers.GainController.outsideTaxYears
+GET     /outside-tax-years                controllers.GainController.outsideTaxYears(mode: Mode = NormalMode)
+GET     /outside-tax-years/change                controllers.GainController.outsideTaxYears(mode: Mode = CheckMode)
 
 #Sell or Give Away Routes
-GET     /sell-or-give-away                controllers.GainController.sellOrGiveAway
-POST    /sell-or-give-away                controllers.GainController.submitSellOrGiveAway
+GET     /sell-or-give-away                controllers.GainController.sellOrGiveAway(mode: Mode = NormalMode)
+POST    /sell-or-give-away                controllers.GainController.submitSellOrGiveAway(mode: Mode = NormalMode)
+GET     /sell-or-give-away/change                controllers.GainController.sellOrGiveAway(mode: Mode = CheckMode)
+POST    /sell-or-give-away/change                controllers.GainController.submitSellOrGiveAway(mode: Mode = CheckMode)
 
 #Who Did You Give It To Routes
 GET     /who-did-you-give-it-to           controllers.GainController.whoDidYouGiveItTo
@@ -43,8 +49,10 @@ GET     /disposal-value                   controllers.GainController.disposalVal
 POST    /disposal-value                   controllers.GainController.submitDisposalValue
 
 #Sell For Less Routes
-GET     /sell-for-less                    controllers.GainController.sellForLess
-POST    /sell-for-less                    controllers.GainController.submitSellForLess
+GET     /sell-for-less                    controllers.GainController.sellForLess(mode: Mode = NormalMode)
+POST    /sell-for-less                    controllers.GainController.submitSellForLess(mode: Mode = NormalMode)
+GET     /sell-for-less/change                    controllers.GainController.sellForLess(mode: Mode = CheckMode)
+POST    /sell-for-less/change                    controllers.GainController.submitSellForLess(mode: Mode = CheckMode)
 
 #Property Worth When Sold For LessRoutes
 GET     /worth-when-sold-for-less         controllers.GainController.worthWhenSoldForLess
